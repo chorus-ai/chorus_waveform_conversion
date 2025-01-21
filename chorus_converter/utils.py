@@ -1,57 +1,43 @@
-# <--------------------------------------------------------------------------------------------------> #
-# <------------------------------------------MODULE IMPORTS------------------------------------------> #
-# <--------------------------------------------------------------------------------------------------> #
-
-
-import numpy as np
-
-import pandas as pd
-
 import datetime as dt
-
-import wfdb
-
 from typing import Tuple, List, Dict
 
+import numpy as np
+import pandas as pd
+import wfdb
 
-# <-------------------------------------------------------------------------------------------------->#
-# <-------------------------------------------DUKE FUNCTIONS----------------------------------------->#
-# <-------------------------------------------------------------------------------------------------->#
 
-
-def get_Duke_mapping_df(
+def get_duke_mapping_df(
     input_dir: str,
     mapping_filename: str,
 ) -> pd.DataFrame:
-    '''
+    """
     We'd get each site to provide a file/info. on mapping to standard names for channels etc.
-    
+
     This function just reads it in and sets the 'signal_id' as the index for efficient lookup
     of channel metadata.
-    
+
     Args:
         input_dir (str): Directory path where the mapping file is saved.
         mapping_filename (str): The name of the mapping file to read.
-        
+
     Returns:
-        Sickbay_Fast_Lookup_df (pd.DataFrame): The DF used to lookup the channel information from the 'signal_id'. 
-        
-    '''
-    
+        sickbay_fast_lookup_df (pd.DataFrame): The DF used to lookup the channel information from the 'signal_id'. 
+
+    """
     # Read in the Sickbay dataframe to map from the 'signal_id's to the other meta data fields. (Looks like this file came from: sickbay.data.get_master_signal_list())
-    Sickbay_Channel_Mapping_df = pd.read_excel(f'{input_dir}/{mapping_filename}')
+    sickbay_channel_mapping_df = pd.read_excel(f'{input_dir}/{mapping_filename}')
 
     # Get just the columns we need for lookup, and set the 'signal_id' as the index for fast (hashmap-like structure) lookup.
-    Sickbay_Fast_Lookup_df = Sickbay_Channel_Mapping_df[['signal_id', 'class', 'sampling_rate', 'units']].set_index('signal_id')
-    
-    return Sickbay_Fast_Lookup_df
+    sickbay_fast_lookup_df = sickbay_channel_mapping_df[['signal_id', 'class', 'sampling_rate', 'units']].set_index('signal_id')
+
+    return sickbay_fast_lookup_df
 
 
-def read_Duke_WF(
+def read_duke_wf(
     input_dir: str, 
     input_filename: str,
 ) -> Tuple[str, str, str, pd.DataFrame]:
-    '''
+    """
     We'd get each site to write a function like this, that reads a WF data file and 
     returns the signal data along with some necessary metadata.
     
@@ -60,12 +46,11 @@ def read_Duke_WF(
         input_filename (str): Name of the file to be processed.
 
     Returns:
-        input_file_ID (str): The patient identifier for this file.
+        input_file_id (str): The patient identifier for this file.
         input_date (str): The start date for the data (YYYYMMDD).
         input_time (str): The start time for the data (HHMMSS).
         signal_df (pd.DataFrame): The DataFrame that contains the signal data.
-    '''
-    
+    """
     # Remove the file extension.
     filename = input_filename.split('.')[0]
 
@@ -73,7 +58,7 @@ def read_Duke_WF(
     meta_info_parts = filename.split('_')
 
     # Extract the Sickbay ID from the split filename.
-    input_file_ID = meta_info_parts[0]
+    input_file_id = meta_info_parts[0]
 
     # Extract the start date from the split filename.
     input_date = meta_info_parts[1]
@@ -83,8 +68,8 @@ def read_Duke_WF(
 
     # Read in the input csv.
     signal_df = pd.read_csv(f'{input_dir}/{input_filename}')
-    
-    return input_file_ID, input_date, input_time, signal_df
+
+    return input_file_id, input_date, input_time, signal_df
 
 
 # <-------------------------------------------------------------------------------------------------->#
@@ -93,16 +78,16 @@ def read_Duke_WF(
 
 
 def get_channel_cols(signal_df: pd.DataFrame) -> List[str]:
-    '''
+    """
     Function to extract the columns in the DataFrame that contain the signal data.
     
     Args:
         signal_df (pd.DataFrame): The DataFrame that contains the signal data.
 
     Returns:
-        channel_cols (List[str]): The list of the channel_IDs that are present in the data. 
-    '''
-    
+        channel_cols (List[str]): The list of the channel_ids that are present in the data. 
+    """
+
     # Define any columns that are not channel columns.
     non_channel_cols = [TIMING_COL]
 
@@ -119,7 +104,7 @@ def get_channel_cols(signal_df: pd.DataFrame) -> List[str]:
     # Check that there is actually some useful data in the dataframe.
     if len(channel_cols)==0:
         raise ValueError("There are no signal columns, with any data, in the input dataframe!")
-        
+
     return channel_cols
 
 
@@ -127,37 +112,36 @@ def get_signal_meta_dicts(
     channel_cols: List[str], 
     mapping_df: pd.DataFrame, 
 ) -> Tuple[Dict, Dict, Dict]:
-    '''
+    """
     Function to extract the relevant channel metadata, for the present channels, from the mapping 
     dataframe, and pack them into dictionaries for later lookup.
-    
+
     Args:
-        channel_cols (List[str]): The list of the channel_IDs that are present in the data. 
+        channel_cols (List[str]): The list of the channel_ids that are present in the data. 
         mapping_df (pd.DataFrame): The DF used to lookup the channel information from the 'signal_id'.
-        
+
     Returns:
         sig_names_dict (Dict): Dictionary to lookup the channel signal names.
         samp_freqs_dict (Dict): Dictionary to lookup the channel signal sampling frequencies.
         units_dict (Dict): Dictionary to lookup the channel signal units.
-    '''
-        
+    """
     # Create empty dicts. for the signal names, sampling frequencies and the units.
     sig_names_dict, samp_freqs_dict, units_dict = {}, {}, {}
 
     # Loop over the channel IDs and extract the name, fs and units from each.
-    for channel_ID in channel_cols:
+    for channel_id in channel_cols:
 
-        # The way we've setup the 'Sickbay_Fast_Lookup_df', the cols are 'class', 'sampling_rate', 'units' with the 'signal_id' as the index.
-        channel_name, channel_samp_freq, channel_unit = mapping_df.loc[int(channel_ID)].values
+        # The way we've setup the 'sickbay_fast_lookup_df', the cols are 'class', 'sampling_rate', 'units' with the 'signal_id' as the index.
+        channel_name, channel_samp_freq, channel_unit = mapping_df.loc[int(channel_id)].values
 
         # Add the channel name to the relevant dict.
-        sig_names_dict[channel_ID] = channel_name
+        sig_names_dict[channel_id] = channel_name
 
         # Add the channel sampling frequency to the relevant dict.
-        samp_freqs_dict[channel_ID] = channel_samp_freq
+        samp_freqs_dict[channel_id] = channel_samp_freq
 
         # Add the channel units to the relevant dict.
-        units_dict[channel_ID] = channel_unit
+        units_dict[channel_id] = channel_unit
 
     return sig_names_dict, samp_freqs_dict, units_dict
 
@@ -172,18 +156,18 @@ def check_timing_coherancy(
     expected_fs: int,
     hz_tolerance: int,
 ) -> int: 
-    '''
+    """
     Here we check if the inferred sampling frequency from the data file 'TIMING_COL'
     is within tolerance (5Hz at the moment?) of what the mapping dataframe expects.
-    
+
     Args:
         signal_df (pd.DataFrame): The DataFrame that contains the signal data.
         expected_fs (int): The expected sampling frequency of the data in the file
         hz_tolerance (int): The maximum acceptable difference between the expected and measured sampling frequencies.
     Returns:
         fs (int): The nominal sampling frequency for the data. 
-    '''
-    
+    """
+
     # Calculate the median time between samples across the datafile.
     median_timing_interval = signal_df[TIMING_COL].diff().median()
 
@@ -199,7 +183,7 @@ def check_timing_coherancy(
 
     else:
         raise ValueError("The measured sampling frequency does not match the quoted sampling frequency!")
-        
+
     return fs
 
 
@@ -209,11 +193,11 @@ def add_timing_index(
     input_time: str,
     fs: int,
 ) -> Tuple[dt.datetime.date, dt.datetime.time]:
-    '''
+    """
     Function to convert the timing col. in the signal dataframe (inplace) to a datetime index. 
     This makes things easy as we segment the data matrix into chunks. 
     Also returns the base date/time after conversion to dt.datetime objects. 
-    
+
     Args:
         signal_df (pd.DataFrame): The DataFrame that contains the signal data.
         input_date (str): The start date for the data (as a string).
@@ -223,7 +207,7 @@ def add_timing_index(
     Returns:
         base_date (dt.datetime.date): The start date for the data (as a datetime object).
         base_time (dt.datetime.time): The start time for the data (as a datetime object).
-    '''
+    """
 
     # Convert the string representing the start time to a datetime time object.
     base_time = dt.datetime.strptime(input_time, '%H%M%S').time() # [wfdb.io.Record PARAM]
@@ -239,7 +223,7 @@ def add_timing_index(
 
     # Drop the original timing column.
     signal_df.drop([TIMING_COL], axis=1, inplace=True)
-    
+
     return base_date, base_time
 
 
@@ -252,60 +236,59 @@ def check_missing_data_blocks(
     signal_df: pd.DataFrame,
     channel_cols: List[str],
 ) -> Tuple[List, List]:
-    '''
+    """
     Check for rows in the data matrix where ALL the signals are missing.
-    
+
     Args:
         signal_df (pd.DataFrame): The DataFrame that contains the signal data.
-        channel_cols (List[str]): The list of the channel_IDs that are present in the data.
+        channel_cols (List[str]): The list of the channel_ids that are present in the data.
 
     Returns:
         data_block_start_indices (List[int]): The indices where chunks of data begin.
-        NaN_block_start_indices (List[int]): The indices where chunks of NaNs begin.
-    '''
+        nan_block_start_indices (List[int]): The indices where chunks of NaNs begin.
+    """
 
     # Create a mask where any signal columns are non-NaN (i.e. atleast one channel has some data).
     data_mask = signal_df[channel_cols].notna().any(axis=1)
 
     # Do a diff between consecutive rows of the mask, this will give '-1' where a block of NaNs starts and '1' where a block of data starts.
-    data_NaN_transitions = data_mask.astype(int).diff()
+    data_nan_transitions = data_mask.astype(int).diff()
 
     # Indices where blocks of data start.
-    data_block_start_indices = data_NaN_transitions[data_NaN_transitions==1].index.tolist()
+    data_block_start_indices = data_nan_transitions[data_nan_transitions==1].index.tolist()
 
     # Indices where blocks of NaNs start.
-    NaN_block_start_indices = data_NaN_transitions[data_NaN_transitions==-1].index.tolist()
+    nan_block_start_indices = data_nan_transitions[data_nan_transitions==-1].index.tolist()
 
     # The diff method doesnt explicitly capture the first row, double check it has some data.
     if signal_df.iloc[0][channel_cols].notna().any():
         data_block_start_indices = [0] + data_block_start_indices
 
     # For the case (likely most of the time) when the zeroth row does have data, append a dummy 'end of data' index.
-    if len(NaN_block_start_indices) == (len(data_block_start_indices)-1):
-        NaN_block_start_indices.append(signal_df.shape[0]+1)
+    if len(nan_block_start_indices) == (len(data_block_start_indices)-1):
+        nan_block_start_indices.append(signal_df.shape[0]+1)
 
-    return data_block_start_indices, NaN_block_start_indices
+    return data_block_start_indices, nan_block_start_indices
 
 
 def check_oversized_chunks(
     data_block_start_indices: List[int], 
-    NaN_block_start_indices: List[int],
+    nan_block_start_indices: List[int],
     fs: int,
 ) -> Tuple[List, List]:
-    '''
+    """
     Check for chunks of data that are larger than our desired segment size,
     adjust the final start/stop indices for segmentation appropriately. 
-    
+
     Args:
         data_block_start_indices (List[int]): The indices where chunks of data begin.
-        NaN_block_start_indices (List[int]): The indices where chunks of NaNs begin.
+        nan_block_start_indices (List[int]): The indices where chunks of NaNs begin.
         fs (int): The nominal sampling frequency for the data. 
 
     Returns:
         segment_start_indices (List[int]): The final indices where segments of data begin.
         segment_stop_indices (List[int]): The final indices where segments of data end.
-    '''
-    
+    """
     # Set the maximum size of each segment.
     max_segment_size = fs*MAX_SEGMENT_LENGTH_SECONDS
 
@@ -314,7 +297,7 @@ def check_oversized_chunks(
     segment_stop_indices = []
 
     # Iterate through the original start and stop indices for the data blocks.
-    for start, stop in zip(data_block_start_indices, NaN_block_start_indices):
+    for start, stop in zip(data_block_start_indices, nan_block_start_indices):
 
         # Check if we've passed the end of the current data block.
         while start < stop:
@@ -342,8 +325,8 @@ def check_oversized_chunks(
                 # Keep the stop index.
                 segment_stop_indices.append(stop)
                 # Move to the next chunk by breaking out of the 'while' loop.
-                break 
-                
+                break
+
     return segment_start_indices, segment_stop_indices
 
 
@@ -360,13 +343,13 @@ def prepare_segment_data(
     segment_start_indices: List[int], 
     segment_stop_indices: List[int],
 ) -> Tuple[List, List, List, List]:
-    '''
+    """
     Loop over the start/stop indices and for each segment create the segment name,
     start time, data matrix and present channels entries. 
     
     Args:
         signal_df (pd.DataFrame): The DataFrame that contains the signal data.
-        channel_cols (List[str]): The list of the channel_IDs that are present in the data.
+        channel_cols (List[str]): The list of the channel_ids that are present in the data.
         master_record_name (str): The name for the master record, from which the segment record names are derived.
         segment_start_indices (List[int]): The final indices where segments of data begin.
         segment_stop_indices (List[int]): The final indices where segments of data end.
@@ -376,8 +359,7 @@ def prepare_segment_data(
         data_segment_start_times_list (List): The list of the start times for each segment.
         data_segment_list (List): The list of data matrixes that represent the data across all channels present in each segment. 
         segment_channels_list (List): The list of channels that are actually present in each segment. 
-    '''
-    
+    """
     # Create a list holding the 'record_name's for each segment, which are the 'master_record_name' with a 4-digit index after an underscore.
     segment_record_names_list = []
 
@@ -412,7 +394,7 @@ def prepare_segment_data(
         data_values = data_segment_df[good_channel_cols].values # (p_signal) [wfdb.io.Record PARAM]
         data_segment_list.append(data_values)
 
-    if not len(segment_record_names_list)==len(data_segment_list)==len(data_segment_start_times_list):
+    if not len(segment_record_names_list) == len(data_segment_list) == len(data_segment_start_times_list):
         raise ValueError("Something went wrong in the segmentation process!")
 
     return segment_record_names_list, data_segment_start_times_list, data_segment_list, segment_channels_list
@@ -433,10 +415,10 @@ def create_segment_records(
     sig_names_dict: Dict, 
     fs: int,
 ) -> List[wfdb.io.Record]:
-    '''
+    """
     Loop over the start/stop indices and create the segment name, start time, data matrix, 
     present channel entries and finally the wfdb.io.Record object for each segment.
-    
+
     Args:
         segment_record_names_list (List): The list of the records that represent the segments in the MultiRecord.
         data_segment_start_times_list (List): The list of the start times for each segment.
@@ -445,11 +427,10 @@ def create_segment_records(
         units_dict (Dict): Dictionary to lookup the channel signal units.
         sig_names_dict (Dict): Dictionary to lookup the channel signal names.
         fs (int): The nominal sampling frequency for the data. 
-        
+
     Returns:
         segments_record_list (List[wfdb.io.Record]): The collated list of the record objects that represent each segment. 
-    '''
-    
+    """
     # Create the list that holds the segment 'wfdb.io.Record's.
     segments_record_list = [] # [wfdb.io.multiRecord PARAM]
 
@@ -529,7 +510,7 @@ def create_segment_records(
         #if Sickbay_Record.__dict__['sig_len'] != signal_df.shape[0]:
         #    raise ValueError("The signal length does not match the length of the input dataframe!")
 
-        '''
+        """
         if segment_Record.__dict__['n_sig'] != len(channel_cols):
             raise ValueError("The number of signals does not match the number of signal columns in the input dataframe!")
 
@@ -544,7 +525,7 @@ def create_segment_records(
 
         if len(segment_Record.__dict__['fmt']) != len(channel_cols):
             raise ValueError("The number of formats does not match the number of signal columns in the input dataframe!")
-        '''
+        """
 
         # Append the segment record to the list.
         segments_record_list.append(segment_Record)
@@ -568,26 +549,26 @@ def create_multirecord(
     units: List,
     fs: int,
 ) -> wfdb.io.MultiRecord:
-    '''
+    """
     Create the final wfdb.io.MultiRecord object with the list of segment records and other metadata for the 
     'master record' that represents all the data for this patient/session.
-    
+
     Args:
         segments_record_list (List[wfdb.io.Record]): The list containing the records for all segments that comprise the MultiRecord.
         master_record_name (str): The name for the master record, from which the segment record names are derived.
         segment_record_names_list (List): The list of the records that represent the segments in the MultiRecord.
         data_segment_start_times_list (List): The list of the start times for each segment.
-        channel_cols (List[str]): The list of the channel_IDs that are present in the data.
+        channel_cols (List[str]): The list of the channel_ids that are present in the data.
         sig_names_list (List[str]): The list of all channel signal names in the MultiRecord.
         units (list): A list of strings giving the units of each signal channel.
         fs (int): The nominal sampling frequency for the data. 
-        
+
     Returns:
-        Final_MultiRecord (wfdb.io.MultiRecord): The final MultiRecord object with all data and metadata for this patient/session. 
-    '''
+        final_multirecord (wfdb.io.MultiRecord): The final MultiRecord object with all data and metadata for this patient/session. 
+    """
 
     # Create the WFDB MultiRecord Object.
-    Final_MultiRecord = wfdb.io.MultiRecord(
+    final_multirecord = wfdb.io.MultiRecord(
         # MultiRecord only stuff:
         segments=segments_record_list,
         layout='variable',
@@ -606,17 +587,12 @@ def create_multirecord(
 
     # Set the total signal length as the sum of the lengths of all segments.
     # Does this change if we include the missing segments as the '~' segments?
-    Final_MultiRecord.__dict__['sig_len'] = np.sum(Final_MultiRecord.__dict__['seg_len'])
+    final_multirecord.__dict__['sig_len'] = np.sum(final_multirecord.__dict__['seg_len'])
 
     # Set the total number of signals as the number of overall channels that appear anywhere in the record.
-    Final_MultiRecord.__dict__['n_sig'] = len(Final_MultiRecord.__dict__['sig_name'])
+    final_multirecord.__dict__['n_sig'] = len(final_multirecord.__dict__['sig_name'])
 
     # Set the units to be the list of units for all channels that appear anywhere in the record.
-    Final_MultiRecord.__dict__['units'] = units
+    final_multirecord.__dict__['units'] = units
 
-    return Final_MultiRecord
-
-
-# <-------------------------------------------------------------------------------------------------->#
-# <--------------------------------------------END OF FILE------------------------------------------->#
-# <-------------------------------------------------------------------------------------------------->#
+    return final_multirecord

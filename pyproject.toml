@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "chorus_converter"}
+
+[tool.setuptools.packages]
+find = { where = ["chorus_converter"] }
+
+[project]
+name = "chorus_converter"
+version = "1.0.0"
+description = "Waveform converter package for CHoRUS"
+dependencies = [
+    "numpy",
+    "pandas",
+    "wfdb",
+]
