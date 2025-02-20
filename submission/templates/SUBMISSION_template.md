@@ -2,7 +2,7 @@
 
 Hospital name:
 
-Brief dataset description: <number of patients, date range covered by waveforms, the types of waveforms being submitted and the number of each type>
+Brief description of the dataset: <number of patients, the years covered by your waveform data, the types (e.g. high-frequency telemetry, low-frequency telemetry, EEG) of waveform files being submitted and the number of each type>
 
 Any known issues: <if there are any known issues with the waveforms, please make them known so we can try to address them>
 
