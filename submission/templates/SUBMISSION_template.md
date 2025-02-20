@@ -31,7 +31,7 @@ Details on how the data is encoded, if applicable:
 
 Details on whether sample intervals are uniform across waveform types and channels (high-frequency waveforms should have uniform sample intervals, but if this is not the case please explain why - we expect that numerics files may have non-uniform sample intervals):
 
-Row-based submissions
+Pair-based submissions
 - Instructions for how to determine the sample number (or "monotonic time") at the start of each segment / message stream:
 
 - Specification of the timestamp variables that represent the wall-clock time at the start and end of each segment / message stream:
