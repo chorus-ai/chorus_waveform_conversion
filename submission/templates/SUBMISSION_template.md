@@ -35,3 +35,7 @@ Pair-based submissions
 - Instructions for how to determine the sample number (or "monotonic time") at the start of each segment / message stream:
 
 - Specification of the timestamp variables that represent the wall-clock time at the start and end of each segment / message stream:
+
+## Waveform EHR Linkage  
+      
+Please outline the process you used for linking `session_id` from your waveform data to `visit_detail_id` in your OMOP EHR data:
